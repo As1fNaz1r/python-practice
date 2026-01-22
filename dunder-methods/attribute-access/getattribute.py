@@ -9,6 +9,9 @@
 # obj.method()    # Goes through __getattribute__
 # obj.__dict__    # Even this goes through __getattribute__!
 
+
+
+# Every time you access ANY attribute on an object, Python calls this method first.
 class Person:
     def __getattribute__(self,name):
         print(f"Someone is asking for: {name}")
