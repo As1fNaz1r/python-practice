@@ -1,0 +1,204 @@
+Part 1: == vs is
+# Two different ways to compare:
+
+a = [1, 2]
+b = [1, 2]
+
+a == b  # True  → "Do they have the same VALUE?"
+a is b  # False → "Are they the SAME OBJECT in memory?"
+Think of it like:
+
+== asks "do these look the same?"
+is asks "are these literally the same thing?"
+Part 2: Making Your Own ==
+class Dog:
+    def __init__(self, name):
+        self.name = name
+    
+    def __eq__(self, other):
+        # Check if other is also a Dog
+        if not isinstance(other, Dog):
+            return NotImplemented
+        
+        # Compare names
+        return self.name == other.name
+
+dog1 = Dog("Buddy")
+dog2 = Dog("Buddy")
+dog3 = Dog("Max")
+
+dog1 == dog2  # True - same name
+dog1 == dog3  # False - different names
+Why NotImplemented instead of False?
+
+Simple: it gives the other object a chance to compare.
+
+dog == "Buddy"  
+# Python tries: dog.__eq__("Buddy") → NotImplemented
+# Then tries: "Buddy".__eq__(dog) → False
+If you returned False, the string never gets asked.
+
+Part 3: You Don't Need ne
+Python automatically makes != work as the opposite of ==:
+
+dog1 != dog3  # Python does: not (dog1 == dog3)
+So skip defining __ne__ unless you have weird special logic.
+
+Part 4: Sorting with < > <= >=
+Want to sort your objects? Define __lt__ (less than):
+
+from functools import total_ordering
+
+@total_ordering
+class Person:
+    def __init__(self, age):
+        self.age = age
+    
+    def __eq__(self, other):
+        if not isinstance(other, Person):
+            return NotImplemented
+        return self.age == other.age
+    
+    def __lt__(self, other):
+        if not isinstance(other, Person):
+            return NotImplemented
+        return self.age < other.age
+
+# Now all of these work:
+p1 = Person(25)
+p2 = Person(30)
+
+p1 < p2   # True
+p1 <= p2  # True
+p1 > p2   # False
+p1 >= p2  # False
+
+people = [Person(30), Person(20), Person(25)]
+sorted(people)  # Sorts by age!
+The @total_ordering decorator creates the other comparison methods for you.
+
+Part 5: hash - Using Objects as Dict Keys
+Want to use your object in a set or as a dict key? You need __hash__:
+
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+    
+    def __eq__(self, other):
+        if not isinstance(other, Point):
+            return NotImplemented
+        return self.x == other.x and self.y == other.y
+    
+    def __hash__(self):
+        return hash((self.x, self.y))
+
+p1 = Point(1, 2)
+p2 = Point(1, 2)
+
+# Now this works:
+points = {p1, p2}  # Set with only 1 point (they're equal)
+locations = {p1: "home", p2: "work"}  # Dict keys
+The Golden Rule: If two objects are equal, their hashes MUST be equal.
+
+if p1 == p2:
+    hash(p1) == hash(p2)  # MUST be True
+Part 6: Why Python Blocks Hashing Sometimes
+class User:
+    def __init__(self, name):
+        self.name = name
+    
+    def __eq__(self, other):
+        return isinstance(other, User) and self.name == other.name
+
+u = User("Alice")
+hash(u)  # ERROR: unhashable type!
+Python does this on purpose! Once you define __eq__, Python disables __hash__ to protect you from bugs.
+
+To fix it, add __hash__:
+
+class User:
+    def __init__(self, name):
+        self.name = name
+    
+    def __eq__(self, other):
+        return isinstance(other, User) and self.name == other.name
+    
+    def __hash__(self):
+        return hash(self.name)
+
+u = User("Alice")
+hash(u)  # Works!
+Part 7: Don't Hash Mutable Things
+# BAD - Don't do this:
+class BadPoint:
+    def __init__(self, x):
+        self.x = x
+    
+    def __hash__(self):
+        return hash(self.x)
+
+p = BadPoint(5)
+my_set = {p}
+print(p in my_set)  # True
+
+p.x = 10  # Change it!
+print(p in my_set)  # False - LOST!
+The object got "lost" because its hash changed. Only hash things that won't change.
+
+Part 8: Easy Mode with Dataclasses
+from dataclasses import dataclass
+
+@dataclass(frozen=True)  # frozen = can't change
+class User:
+    id: int
+    name: str
+
+# Python auto-creates __eq__ and __hash__ for you!
+
+u1 = User(1, "Alice")
+u2 = User(1, "Alice")
+
+u1 == u2  # True
+users = {u1, u2}  # Works in sets!
+Quick Cheat Sheet
+Just want equality?
+
+def __eq__(self, other):
+    if not isinstance(other, MyClass):
+        return NotImplemented
+    return self.value == other.value
+Want to use in sets/dicts?
+
+def __eq__(self, other):
+    if not isinstance(other, MyClass):
+        return NotImplemented
+    return self.value == other.value
+
+def __hash__(self):
+    return hash(self.value)  # Only hash unchanging values!
+Want sorting?
+
+from functools import total_ordering
+
+@total_ordering
+class MyClass:
+    def __eq__(self, other):
+        # equality logic
+    
+    def __lt__(self, other):
+        # less than logic
+Want everything easy?
+
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class MyClass:
+    value: int
+That's it! The key ideas:
+
+== checks value, is checks identity
+Return NotImplemented for unknown types
+If you want dict/set support, add __hash__
+Don't hash things that can change
+Use dataclasses to skip the boilerplate
