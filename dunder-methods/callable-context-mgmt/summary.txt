@@ -1,0 +1,18 @@
+Quick Summary:
+__call__:
+Makes objects callable like functions: obj()
+Useful for objects that need to remember state
+Syntax: def __call__(self, *args, **kwargs):
+__enter__ and __exit__:
+Used with with statement for resource management
+__enter__: Setup (runs when entering block)
+__exit__: Cleanup (ALWAYS runs when leaving block)
+Perfect for files, connections, locks, timers, etc.
+Key Benefits:
+__call__: Functions with memory
+Context Managers: Guaranteed cleanup, even with errors
+Both make your code cleaner and more Pythonic!
+Real-world uses:
+
+__call__: Decorators, callbacks, stateful functions
+Context managers: File handling, database connections, locks, transactions
