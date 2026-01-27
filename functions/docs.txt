@@ -1,0 +1,141 @@
+
+DAY 1: Functions as Objects + Passing Functions
+Goal: Understand that functions are just objects you can move around.
+
+Morning (1-2 hours)
+Type checking (15 min)
+
+Create 3 different functions
+Print type() of each
+Assign them to variables
+Prove they're objects
+Assignment experiments (30 min)
+
+Assign function to variable
+Put functions in a list
+Put functions in a dict
+Call them from those containers
+Passing functions (45 min)
+
+Write a function that takes another function as parameter
+Create 3 simple functions (uppercase, lowercase, reverse)
+Pass each to your "executor" function
+Print results
+Afternoon (1-2 hours)
+Build a simple calculator (60 min)
+
+Write add, subtract, multiply, divide functions
+Write a calculate(operation, a, b) function
+Call it with different operations
+Add error handling
+Practice challenge (30 min)
+
+Write a function that takes a list of functions
+Apply each function to the same input
+Return list of results
+End of day checkpoint: Can you explain why func and func() are different?
+
+DAY 2: Returning Functions + Closures
+Goal: Functions can create and return other functions that remember data.
+
+Morning (1-2 hours)
+Simple function return (30 min)
+
+Write a function that returns another function
+Call the outer function, store result
+Call the inner function
+Print what happens at each step
+Closure basics (45 min)
+
+Write make_multiplier(n) that returns a function
+Create times_2, times_3, times_10
+Test each with different inputs
+Add print statements to see when outer/inner execute
+Understanding scope (30 min)
+
+Try to modify outer variable without nonlocal (watch it fail)
+Add nonlocal keyword
+Understand read vs write difference
+Afternoon (1-2 hours)
+Build practical closures (60 min)
+
+Counter (like the example)
+Bank account (deposit/withdraw with balance memory)
+Logger with prefix (remembers log level)
+Closure debugging (30 min)
+
+Use __closure__ attribute to inspect
+Print cell contents
+Understand what's being "closed over"
+End of day checkpoint: Can you build a closure that remembers 2 variables?
+
+DAY 3: Decorators (Manual → @ Syntax)
+Goal: Decorators are just function wrappers. The @ is syntax sugar.
+
+Morning (1-2 hours)
+Manual wrapping (45 min)
+
+Write a simple function
+Write a decorator that prints before/after
+Apply decorator manually: func = decorator(func)
+Call the wrapped function
+Do this 3 times with different functions
+Using @ syntax (30 min)
+
+Take your manual decorator
+Apply it with @decorator
+Prove it's identical to manual wrapping
+Try stacking 2 decorators
+Decorators with arguments (45 min)
+
+Write @repeat(n) decorator
+Understand the 3-layer structure
+Test with n=1, n=5, n=10
+Add print statements to see execution order
+Afternoon (1-2 hours)
+functools.wraps (30 min)
+
+Check __name__ before wraps
+Add @wraps(func)
+Check __name__ after
+Understand why this matters
+Build practical decorators (60 min)
+
+Timer decorator (measure execution time)
+Logger decorator (print function name + args)
+Validator decorator (check argument types)
+End of day checkpoint: Can you write a decorator with arguments from scratch?
+
+DAY 4: Advanced Patterns + Real Use Cases
+Goal: Combine everything and see real-world applications.
+
+Morning (1-2 hours)
+functools.partial (30 min)
+
+Create base function with multiple params
+Use partial to freeze some arguments
+Compare to closure approach
+Understand when to use each
+Decorator patterns (60 min)
+
+Decorator that works with/without arguments
+Class-based decorator
+Decorator that modifies return value
+Chaining decorators (order matters!)
+Afternoon (1-2 hours)
+Real-world scenarios (60 min)
+
+Authentication decorator (check if user logged in)
+Caching/memoization decorator
+Retry decorator (retry on failure)
+Rate limiting decorator
+Integration challenge (60 min)
+
+Build a mini-framework:
+Route decorator (like Flask)
+Store functions in a registry
+Call them based on "path"
+Example:
+@route("/home")
+def home():
+    return "Home page"
