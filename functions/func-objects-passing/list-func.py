@@ -11,6 +11,12 @@ def is_even(num):
 
 
 operations = [greet, add, is_even]
+# call them by index
 print(operations[0]("asif"))
 print(operations[1](12,11))
 print(operations[2](5))
+
+# output
+# Hello, asif
+# 23
+# False
