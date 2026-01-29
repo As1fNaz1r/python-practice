@@ -1,0 +1,424 @@
+Advanced Async Concepts
+1. Event Loop Internals
+The event loop isn't magic - it's a while loop checking tasks:
+
+# Simplified event loop concept
+tasks = []
+while tasks:
+    for task in tasks:
+        if task.is_ready():
+            task.run_next_step()
+        if task.is_done():
+            tasks.remove(task)
+Key insight: await doesn't pause the entire program, it just yields control back to the event loop.
+
+2. Coroutines vs Tasks vs Futures
+import asyncio
+
+async def my_coro():
+    await asyncio.sleep(1)
+    return "done"
+
+# Coroutine: Just a definition, not running yet
+coro = my_coro()  # <coroutine object>
+
+# Task: Scheduled on event loop, running
+task = asyncio.create_task(coro)  # Starts immediately
+
+# Future: Low-level promise of a result
+future = asyncio.Future()  # Manual control
+future.set_result("value")
+Hierarchy:
+
+Coroutine = Recipe (not cooking yet)
+Task = Dish being cooked (scheduled)
+Future = Promise that dish will be ready (low-level primitive)
+3. asyncio.gather vs asyncio.wait vs TaskGroup
+import asyncio
+
+async def task(n):
+    await asyncio.sleep(n)
+    return n
+
+# gather: Wait for all, return results in order
+results = await asyncio.gather(task(1), task(2), task(3))
+# [1, 2, 3]
+
+# wait: More control, returns (done, pending) sets
+done, pending = await asyncio.wait(
+    [task(1), task(2), task(3)],
+    return_when=asyncio.FIRST_COMPLETED  # or ALL_COMPLETED, FIRST_EXCEPTION
+)
+
+# TaskGroup (Python 3.11+): Structured concurrency
+async with asyncio.TaskGroup() as tg:
+    t1 = tg.create_task(task(1))
+    t2 = tg.create_task(task(2))
+    # If any task fails, all are cancelled
+# All tasks guaranteed done here
+When to use:
+
+gather: Simple case, want all results
+wait: Need fine control over completion
+TaskGroup: Want automatic cleanup and error handling
+4. Async Context Managers & Iterators
+# Async context manager
+class AsyncResource:
+    async def __aenter__(self):
+        print("Acquiring resource...")
+        await asyncio.sleep(1)
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        print("Releasing resource...")
+        await asyncio.sleep(1)
+
+async def use_resource():
+    async with AsyncResource() as resource:
+        print("Using resource")
+
+# Async iterator
+class AsyncCounter:
+    def __init__(self, max):
+        self.max = max
+        self.current = 0
+    
+    def __aiter__(self):
+        return self
+    
+    async def __anext__(self):
+        if self.current >= self.max:
+            raise StopAsyncIteration
+        await asyncio.sleep(0.1)
+        self.current += 1
+        return self.current
+
+async def iterate():
+    async for num in AsyncCounter(5):
+        print(num)
+5. Semaphores & Locks (Concurrency Control)
+import asyncio
+
+# Semaphore: Limit concurrent access
+semaphore = asyncio.Semaphore(3)  # Max 3 at once
+
+async def limited_task(n):
+    async with semaphore:
+        print(f"Task {n} running")
+        await asyncio.sleep(1)
+        print(f"Task {n} done")
+
+async def main():
+    # Only 3 will run concurrently
+    await asyncio.gather(*[limited_task(i) for i in range(10)])
+
+# Lock: Mutual exclusion (only 1 at a time)
+lock = asyncio.Lock()
+shared_resource = 0
+
+async def increment():
+    global shared_resource
+    async with lock:
+        temp = shared_resource
+        await asyncio.sleep(0.01)  # Simulate work
+        shared_resource = temp + 1
+Real use case: Rate limiting API calls
+
+class RateLimiter:
+    def __init__(self, rate, per):
+        self.rate = rate  # Number of calls
+        self.per = per    # Per time period
+        self.allowance = rate
+        self.last_check = asyncio.get_event_loop().time()
+    
+    async def acquire(self):
+        current = asyncio.get_event_loop().time()
+        time_passed = current - self.last_check
+        self.last_check = current
+        self.allowance += time_passed * (self.rate / self.per)
+        
+        if self.allowance > self.rate:
+            self.allowance = self.rate
+        
+        if self.allowance < 1.0:
+            sleep_time = (1.0 - self.allowance) * (self.per / self.rate)
+            await asyncio.sleep(sleep_time)
+            self.allowance = 0.0
+        else:
+            self.allowance -= 1.0
+
+# Usage
+limiter = RateLimiter(rate=5, per=1.0)  # 5 calls per second
+
+async def api_call(url):
+    await limiter.acquire()
+    # Make actual call
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            return await response.text()
+6. Cancellation & Cleanup
+import asyncio
+
+async def cancellable_task():
+    try:
+        while True:
+            print("Working...")
+            await asyncio.sleep(1)
+    except asyncio.CancelledError:
+        print("Task was cancelled, cleaning up...")
+        # Do cleanup here
+        raise  # Re-raise to properly cancel
+
+async def main():
+    task = asyncio.create_task(cancellable_task())
+    
+    await asyncio.sleep(3)
+    task.cancel()  # Request cancellation
+    
+    try:
+        await task
+    except asyncio.CancelledError:
+        print("Task cancelled successfully")
+
+# Shield: Protect from cancellation
+async def critical_operation():
+    await asyncio.sleep(2)
+    return "Important result"
+
+async def main():
+    task = asyncio.create_task(critical_operation())
+    
+    # Even if main is cancelled, this completes
+    result = await asyncio.shield(task)
+7. Async Queues (Producer-Consumer Pattern)
+import asyncio
+import random
+
+async def producer(queue, producer_id):
+    for i in range(5):
+        item = f"Producer-{producer_id}-Item-{i}"
+        await queue.put(item)
+        print(f"Produced: {item}")
+        await asyncio.sleep(random.uniform(0.1, 0.5))
+    
+async def consumer(queue, consumer_id):
+    while True:
+        try:
+            item = await asyncio.wait_for(queue.get(), timeout=2.0)
+            print(f"Consumer-{consumer_id} processing: {item}")
+            await asyncio.sleep(random.uniform(0.2, 0.8))
+            queue.task_done()
+        except asyncio.TimeoutError:
+            print(f"Consumer-{consumer_id} timed out, exiting")
+            break
+
+async def main():
+    queue = asyncio.Queue(maxsize=5)
+    
+    # Multiple producers and consumers
+    producers = [asyncio.create_task(producer(queue, i)) for i in range(2)]
+    consumers = [asyncio.create_task(consumer(queue, i)) for i in range(3)]
+    
+    await asyncio.gather(*producers)
+    await queue.join()  # Wait for all items to be processed
+    
+    # Cancel consumers
+    for c in consumers:
+        c.cancel()
+8. Mixing Sync & Async Code
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
+# Run blocking code in thread pool
+def blocking_io():
+    import time
+    time.sleep(2)
+    return "Blocking result"
+
+async def main():
+    loop = asyncio.get_event_loop()
+    
+    # Run in executor (thread pool)
+    result = await loop.run_in_executor(None, blocking_io)
+    print(result)
+
+# Run async code from sync code
+def sync_function():
+    result = asyncio.run(async_function())
+    return result
+
+async def async_function():
+    await asyncio.sleep(1)
+    return "Async result"
+9. Error Handling Patterns
+import asyncio
+
+async def risky_task(n):
+    await asyncio.sleep(1)
+    if n == 3:
+        raise ValueError(f"Task {n} failed!")
+    return n
+
+# Pattern 1: gather with return_exceptions
+async def handle_all():
+    results = await asyncio.gather(
+        risky_task(1),
+        risky_task(2),
+        risky_task(3),
+        return_exceptions=True  # Don't stop on error
+    )
+    
+    for i, result in enumerate(results):
+        if isinstance(result, Exception):
+            print(f"Task {i} failed: {result}")
+        else:
+            print(f"Task {i} succeeded: {result}")
+
+# Pattern 2: Individual try-catch
+async def safe_task(n):
+    try:
+        return await risky_task(n)
+    except Exception as e:
+        print(f"Caught error in task {n}: {e}")
+        return None
+
+# Pattern 3: TaskGroup (auto-cancels on error)
+async def strict_handling():
+    try:
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(risky_task(1))
+            tg.create_task(risky_task(2))
+            tg.create_task(risky_task(3))
+    except* ValueError as eg:  # Exception group
+        print(f"Some tasks failed: {eg.exceptions}")
+10. Performance Patterns
+import asyncio
+import aiohttp
+
+# Bad: Sequential
+async def fetch_all_sequential(urls):
+    results = []
+    async with aiohttp.ClientSession() as session:
+        for url in urls:
+            async with session.get(url) as response:
+                results.append(await response.text())
+    return results
+
+# Good: Concurrent with gather
+async def fetch_all_concurrent(urls):
+    async with aiohttp.ClientSession() as session:
+        tasks = [session.get(url) for url in urls]
+        responses = await asyncio.gather(*tasks)
+        return [await r.text() for r in responses]
+
+# Better: Concurrent with semaphore (rate limiting)
+async def fetch_all_limited(urls, max_concurrent=10):
+    semaphore = asyncio.Semaphore(max_concurrent)
+    
+    async def fetch_one(session, url):
+        async with semaphore:
+            async with session.get(url) as response:
+                return await response.text()
+    
+    async with aiohttp.ClientSession() as session:
+        tasks = [fetch_one(session, url) for url in urls]
+        return await asyncio.gather(*tasks)
+
+# Best: Streaming with queue (memory efficient)
+async def fetch_all_streaming(urls, max_concurrent=10):
+    queue = asyncio.Queue()
+    results = []
+    
+    async def producer():
+        for url in urls:
+            await queue.put(url)
+        # Signal done
+        for _ in range(max_concurrent):
+            await queue.put(None)
+    
+    async def consumer():
+        async with aiohttp.ClientSession() as session:
+            while True:
+                url = await queue.get()
+                if url is None:
+                    break
+                async with session.get(url) as response:
+                    results.append(await response.text())
+    
+    await asyncio.gather(
+        producer(),
+        *[consumer() for _ in range(max_concurrent)]
+    )
+    return results
+11. Debugging Async Code
+import asyncio
+import logging
+
+# Enable debug mode
+asyncio.run(main(), debug=True)
+
+# Log slow callbacks
+logging.basicConfig(level=logging.DEBUG)
+
+# Track running tasks
+def print_tasks():
+    tasks = asyncio.all_tasks()
+    print(f"Running tasks: {len(tasks)}")
+    for task in tasks:
+        print(f"  - {task.get_name()}: {task}")
+
+# Set task names for debugging
+task = asyncio.create_task(my_coro(), name="my-important-task")
+
+# Detect blocking calls
+import warnings
+warnings.simplefilter('always', ResourceWarning)
+Real-World Architecture Pattern
+import asyncio
+from typing import List, Callable
+
+class AsyncPipeline:
+    """Process items through async stages"""
+    
+    def __init__(self, stages: List[Callable], max_concurrent=10):
+        self.stages = stages
+        self.semaphore = asyncio.Semaphore(max_concurrent)
+    
+    async def process_item(self, item):
+        async with self.semaphore:
+            result = item
+            for stage in self.stages:
+                result = await stage(result)
+            return result
+    
+    async def process_batch(self, items):
+        tasks = [self.process_item(item) for item in items]
+        return await asyncio.gather(*tasks, return_exceptions=True)
+
+# Usage
+async def fetch_data(url):
+    # Fetch from API
+    await asyncio.sleep(0.1)
+    return {"url": url, "data": "..."}
+
+async def transform_data(item):
+    # Transform
+    await asyncio.sleep(0.05)
+    item["transformed"] = True
+    return item
+
+async def save_data(item):
+    # Save to database
+    await asyncio.sleep(0.1)
+    return item
+
+pipeline = AsyncPipeline([fetch_data, transform_data, save_data])
+results = await pipeline.process_batch(urls)
+Key Takeaways
+Event loop is cooperative - tasks must yield control with await
+Semaphores for rate limiting - control concurrent access
+Queues for backpressure - producer-consumer patterns
+Shield critical operations - protect from cancellation
+Use executors for blocking code - don't block the event loop
+TaskGroup for structured concurrency - automatic cleanup
+return_exceptions=True - handle errors gracefully
