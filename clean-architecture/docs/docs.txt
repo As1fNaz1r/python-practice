@@ -1,0 +1,263 @@
+2️⃣ Service Layer
+The service layer contains your business logic - the rules that make your application unique.
+
+# Domain models (pure business objects)
+class Order:
+    def __init__(self, customer_id, items, total):
+        self.customer_id = customer_id
+        self.items = items
+        self.total = total
+        self.status = "pending"
+    
+    def calculate_total(self):
+        return sum(item['price'] * item['quantity'] for item in self.items)
+
+# Service layer (business operations)
+class OrderService:
+    def __init__(self, order_repo, email_service):
+        self.order_repo = order_repo
+        self.email_service = email_service
+    
+    def place_order(self, customer_id, items):
+        # Business logic lives here
+        order = Order(customer_id, items, 0)
+        order.total = order.calculate_total()
+        
+        # Apply business rules
+        if order.total < 10:
+            raise ValueError("Minimum order is $10")
+        
+        # Save and notify
+        self.order_repo.save(order)
+        self.email_service.send_confirmation(customer_id, order)
+        
+        return order
+Why it matters: All your business rules are in one place, not scattered across controllers, database code, or UI logic.
+
+3️⃣ Ports & Adapters (Hexagonal Architecture)
+Think of your application as having:
+
+Ports: Interfaces that define what your app needs (input) or provides (output)
+Adapters: Concrete implementations that connect to the outside world
+# PORT: What your app needs (interface)
+class PaymentGateway(ABC):
+    @abstractmethod
+    def charge(self, amount, card_token):
+        pass
+
+# ADAPTER: Real implementation
+class StripeAdapter(PaymentGateway):
+    def charge(self, amount, card_token):
+        # Talk to Stripe API
+        print(f"Charging ${amount} via Stripe")
+        return {"status": "success", "transaction_id": "stripe_123"}
+
+# ADAPTER: Test implementation
+class FakePaymentAdapter(PaymentGateway):
+    def charge(self, amount, card_token):
+        # No real API calls - perfect for testing
+        print(f"Fake charge: ${amount}")
+        return {"status": "success", "transaction_id": "fake_123"}
+
+# Your business logic only knows about the PORT
+class CheckoutService:
+    def __init__(self, payment_gateway: PaymentGateway):
+        self.payment = payment_gateway
+    
+    def process_payment(self, amount, card):
+        result = self.payment.charge(amount, card)
+        return result
+
+# Swap adapters easily
+checkout = CheckoutService(StripeAdapter())  # Production
+checkout_test = CheckoutService(FakePaymentAdapter())  # Testing
+The Magic: Your core business logic never imports Stripe, PayPal, or any specific library. It just uses the port.
+
+4️⃣ Repository Pattern
+Repositories abstract away data storage. Your business logic doesn't know if data comes from MySQL, MongoDB, a file, or memory.
+
+# PORT: Repository interface
+class UserRepository(ABC):
+    @abstractmethod
+    def get_by_id(self, user_id):
+        pass
+    
+    @abstractmethod
+    def save(self, user):
+        pass
+
+# ADAPTER: Database implementation
+class SQLUserRepository(UserRepository):
+    def __init__(self, db_connection):
+        self.db = db_connection
+    
+    def get_by_id(self, user_id):
+        # SQL query here
+        return {"id": user_id, "name": "John", "email": "john@example.com"}
+    
+    def save(self, user):
+        # SQL insert/update here
+        print(f"Saving user to database: {user}")
+
+# ADAPTER: In-memory implementation (great for testing)
+class InMemoryUserRepository(UserRepository):
+    def __init__(self):
+        self.users = {}
+    
+    def get_by_id(self, user_id):
+        return self.users.get(user_id)
+    
+    def save(self, user):
+        self.users[user['id']] = user
+
+# Business logic doesn't care about storage
+class UserService:
+    def __init__(self, user_repo: UserRepository):
+        self.repo = user_repo
+    
+    def register_user(self, user_data):
+        # Validate business rules
+        if len(user_data['email']) < 5:
+            raise ValueError("Invalid email")
+        
+        self.repo.save(user_data)
+        return user_data
+
+# Easy to test without a real database
+service = UserService(InMemoryUserRepository())
+service.register_user({"id": 1, "email": "test@example.com"})
+5️⃣ Avoiding Framework Coupling
+The Trap:
+
+# ❌ Business logic mixed with Flask
+from flask import Flask, request
+
+app = Flask(__name__)
+
+@app.route('/orders', methods=['POST'])
+def create_order():
+    data = request.json
+    # Business logic directly in the route handler
+    if data['total'] < 10:
+        return {"error": "Minimum $10"}, 400
+    
+    # Direct database call
+    db.execute("INSERT INTO orders ...")
+    return {"status": "created"}
+Now your business logic is trapped inside Flask. Can't test without Flask. Can't reuse in a CLI tool or background job.
+
+The Solution:
+
+# ✅ Framework is just an adapter
+
+# Core business logic (framework-agnostic)
+class OrderService:
+    def __init__(self, order_repo):
+        self.repo = order_repo
+    
+    def create_order(self, order_data):
+        if order_data['total'] < 10:
+            raise ValueError("Minimum order is $10")
+        
+        order = self.repo.save(order_data)
+        return order
+
+# Flask adapter (thin layer)
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+order_service = OrderService(SQLOrderRepository())
+
+@app.route('/orders', methods=['POST'])
+def create_order_endpoint():
+    try:
+        order = order_service.create_order(request.json)
+        return jsonify(order), 201
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+# CLI adapter (same business logic!)
+def create_order_cli(order_data):
+    try:
+        order = order_service.create_order(order_data)
+        print(f"Order created: {order}")
+    except ValueError as e:
+        print(f"Error: {e}")
+🏗️ Putting It All Together
+Here's a complete mini-example:
+
+from abc import ABC, abstractmethod
+
+# ===== DOMAIN LAYER (Business Logic) =====
+class Product:
+    def __init__(self, id, name, price):
+        self.id = id
+        self.name = name
+        self.price = price
+
+# ===== PORTS (Interfaces) =====
+class ProductRepository(ABC):
+    @abstractmethod
+    def find_by_id(self, product_id):
+        pass
+
+class EmailService(ABC):
+    @abstractmethod
+    def send(self, to, subject, body):
+        pass
+
+# ===== SERVICE LAYER =====
+class ProductService:
+    def __init__(self, product_repo: ProductRepository, email: EmailService):
+        self.repo = product_repo
+        self.email = email
+    
+    def get_product_details(self, product_id):
+        product = self.repo.find_by_id(product_id)
+        if not product:
+            raise ValueError("Product not found")
+        return product
+    
+    def notify_price_change(self, product_id, new_price):
+        product = self.get_product_details(product_id)
+        product.price = new_price
+        self.email.send(
+            "admin@shop.com",
+            "Price Updated",
+            f"{product.name} now costs ${new_price}"
+        )
+
+# ===== ADAPTERS (Implementations) =====
+class InMemoryProductRepository(ProductRepository):
+    def __init__(self):
+        self.products = {
+            1: Product(1, "Laptop", 999),
+            2: Product(2, "Mouse", 25)
+        }
+    
+    def find_by_id(self, product_id):
+        return self.products.get(product_id)
+
+class ConsoleEmailService(EmailService):
+    def send(self, to, subject, body):
+        print(f"Email to {to}: {subject} - {body}")
+
+# ===== USAGE =====
+# Wire everything together (Dependency Injection)
+repo = InMemoryProductRepository()
+email = ConsoleEmailService()
+service = ProductService(repo, email)
+
+# Use the service
+product = service.get_product_details(1)
+print(f"Found: {product.name} - ${product.price}")
+
+service.notify_price_change(1, 899)
+🎓 Key Takeaways
+Dependency Inversion: Depend on abstractions (interfaces), not concrete classes
+Service Layer: Keep business logic separate from infrastructure
+Ports & Adapters: Define interfaces (ports) and swap implementations (adapters)
+Repository Pattern: Abstract data access behind an interface
+Framework Independence: Frameworks are details, not the core of your app
+The Goal: When requirements change (and they will), you can adapt without rewriting everything. Swap databases? Change the adapter. Switch from Flask to FastAPI? Just write a new thin adapter layer. Your business logic stays untouched.
+

@@ -12,3 +12,8 @@ class Person:
     
 
 person = Person("Asif","23")
+
+# output 
+# <__main__.Person object at 0x10bc73f10>
+# init run
+# Asif 23

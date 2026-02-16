@@ -1,6 +1,5 @@
 # Preventing __init__ from Running Multiple Times in Singleton
 
-
 class Singleton:
     _instance = None
     _initialized = False
@@ -18,4 +17,8 @@ class Singleton:
 
 s1 = Singleton()
 s2 = Singleton()
+s3 = Singleton()
 
+
+#output 
+# initialized once
