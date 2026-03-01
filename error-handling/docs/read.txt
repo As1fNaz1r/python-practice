@@ -1,0 +1,507 @@
+Here's the complete Python exception hierarchy with examples for each:
+
+Complete Python Exception Hierarchy
+BaseException
+├── SystemExit
+├── KeyboardInterrupt
+├── GeneratorExit
+└── Exception
+    ├── StopIteration
+    ├── StopAsyncIteration
+    ├── ArithmeticError
+    │   ├── ZeroDivisionError
+    │   ├── FloatingPointError
+    │   ├── OverflowError
+    │   └── UnderflowError (rarely used)
+    ├── AssertionError
+    ├── AttributeError
+    ├── BufferError
+    ├── EOFError
+    ├── ImportError
+    │   └── ModuleNotFoundError
+    ├── LookupError
+    │   ├── IndexError
+    │   └── KeyError
+    ├── MemoryError
+    ├── NameError
+    │   └── UnboundLocalError
+    ├── OSError
+    │   ├── BlockingIOError
+    │   ├── ChildProcessError
+    │   ├── ConnectionError
+    │   │   ├── BrokenPipeError
+    │   │   ├── ConnectionAbortedError
+    │   │   ├── ConnectionRefusedError
+    │   │   └── ConnectionResetError
+    │   ├── FileExistsError
+    │   ├── FileNotFoundError
+    │   ├── InterruptedError
+    │   ├── IsADirectoryError
+    │   ├── NotADirectoryError
+    │   ├── PermissionError
+    │   ├── ProcessLookupError
+    │   └── TimeoutError
+    ├── ReferenceError
+    ├── RuntimeError
+    │   ├── NotImplementedError
+    │   └── RecursionError
+    ├── SyntaxError
+    │   └── IndentationError
+    │       ├── TabError
+    │       └── IndentationError
+    ├── SystemError
+    ├── TypeError
+    ├── ValueError
+    │   └── UnicodeError
+    │       ├── UnicodeDecodeError
+    │       ├── UnicodeEncodeError
+    │       └── UnicodeTranslateError
+    └── Warning (not really an exception, but in hierarchy)
+Detailed Examples for Each Exception
+BaseException (Root of all exceptions)
+# BaseException itself is rarely caught directly
+# It includes system-level exceptions you usually don't want to catch
+SystemExit (When sys.exit() is called)
+import sys
+
+try:
+    sys.exit(0)  # Exit program with code 0
+except SystemExit as e:
+    print(f"Program tried to exit with code: {e.code}")
+    # Usually you don't catch this - let the program exit!
+KeyboardInterrupt (Ctrl+C pressed)
+try:
+    while True:
+        user_input = input("Press Ctrl+C to interrupt: ")
+except KeyboardInterrupt:
+    print("\nProgram interrupted by user")
+# Don't catch this unless you need special cleanup
+GeneratorExit (Generator closed)
+def my_generator():
+    try:
+        yield 1
+        yield 2
+        yield 3
+    except GeneratorExit:
+        print("Generator is being closed")
+        raise  # Must re-raise
+
+gen = my_generator()
+print(next(gen))  # 1
+gen.close()       # Triggers GeneratorExit
+Exception (Base class for all "normal" exceptions)
+# This is what you usually catch
+try:
+    risky_operation()
+except Exception as e:  # Catches all "normal" errors
+    print(f"Error occurred: {e}")
+Common Exception Categories
+ArithmeticError (Math-related errors)
+# ZeroDivisionError
+try:
+    result = 10 / 0
+except ZeroDivisionError:
+    print("Can't divide by zero!")
+
+# OverflowError (when result too large)
+import math
+try:
+    result = math.exp(1000)  # Might overflow
+except OverflowError:
+    print("Result too large!")
+
+# FloatingPointError (rare, from floating point operations)
+# Usually requires special setup to trigger
+LookupError (Accessing invalid indexes/keys)
+# IndexError (list index out of range)
+try:
+    items = [1, 2, 3]
+    value = items[10]
+except IndexError:
+    print("List index out of range!")
+
+# KeyError (dictionary key doesn't exist)
+try:
+    data = {"name": "Alice"}
+    value = data["age"]
+except KeyError:
+    print("Dictionary key not found!")
+ValueError (Wrong value type)
+# int() with non-numeric string
+try:
+    number = int("abc")
+except ValueError:
+    print("Can't convert 'abc' to integer")
+
+# float() with invalid input
+try:
+    value = float("not a number")
+except ValueError:
+    print("Invalid float value")
+
+# list.index() when value not found
+try:
+    index = [1, 2, 3].index(5)
+except ValueError:
+    print("Value not found in list")
+TypeError (Wrong data type)
+# Adding incompatible types
+try:
+    result = 5 + "hello"
+except TypeError:
+    print("Can't add int and str")
+
+# Calling non-callable object
+try:
+    result = "not a function"()
+except TypeError:
+    print("Object is not callable")
+
+# Wrong number of arguments
+def greet(name):
+    return f"Hello {name}"
+
+try:
+    greet()  # Missing argument
+except TypeError:
+    print("Missing required argument")
+AttributeError (Missing attribute/method)
+class Person:
+    def __init__(self, name):
+        self.name = name
+
+person = Person("Alice")
+
+try:
+    person.age  # Person has no 'age' attribute
+except AttributeError:
+    print("Object has no such attribute")
+
+try:
+    person.some_method()  # Method doesn't exist
+except AttributeError:
+    print("Object has no such method")
+OSError and subclasses (File/OS operations)
+# FileNotFoundError
+try:
+    with open("non_existent.txt", "r") as f:
+        content = f.read()
+except FileNotFoundError:
+    print("File doesn't exist")
+
+# PermissionError
+try:
+    with open("/etc/shadow", "r") as f:  # Usually requires root
+        content = f.read()
+except PermissionError:
+    print("No permission to read file")
+
+# IsADirectoryError / NotADirectoryError
+import os
+try:
+    os.remove("/tmp")  # Can't remove directory with os.remove()
+except IsADirectoryError:
+    print("That's a directory, not a file")
+
+try:
+    with open("/tmp", "r") as f:  # /tmp is a directory
+        content = f.read()
+except IsADirectoryError:
+    print("Can't open directory as file")
+ImportError (Module import issues)
+# ImportError (general import failure)
+try:
+    import non_existent_module
+except ImportError:
+    print("Could not import module")
+
+# ModuleNotFoundError (Python 3.6+, specific module not found)
+try:
+    import this_module_does_not_exist
+except ModuleNotFoundError as e:
+    print(f"Module not found: {e.name}")
+
+# ImportError with from...import
+try:
+    from math import non_existent_function
+except ImportError:
+    print("Could not import specific item from module")
+NameError (Undefined variable)
+# NameError (variable not defined)
+try:
+    print(undefined_variable)
+except NameError:
+    print("Variable not defined")
+
+# UnboundLocalError (local variable referenced before assignment)
+def buggy_function():
+    try:
+        print(x)  # x not defined yet
+        x = 10
+    except UnboundLocalError:
+        print("Local variable referenced before assignment")
+SyntaxError (Code syntax problems)
+# SyntaxError (caught at parse time, not runtime)
+# Usually you can't catch these with try/except
+# They happen when Python reads your code
+
+# Example of syntax error:
+# print("Hello"  # Missing closing parenthesis
+
+# But you can catch them in eval() or exec()
+try:
+    eval("print('Hello'")  # Missing closing parenthesis
+except SyntaxError as e:
+    print(f"Syntax error: {e}")
+    print(f"At line {e.lineno}, offset {e.offset}")
+IndentationError (Wrong indentation)
+# IndentationError (special type of SyntaxError)
+# Usually caught at parse time
+
+# Example:
+# def wrong():
+# print("Bad indentation")  # Missing indentation
+
+# TabError (mixing tabs and spaces)
+# Example:
+# def mixed():
+#     "spaces"
+# 	"tab"  # This line uses a tab
+RuntimeError (General runtime errors)
+# NotImplementedError (for abstract methods)
+class Animal:
+    def speak(self):
+        raise NotImplementedError("Subclass must implement speak()")
+
+class Dog(Animal):
+    pass  # Forgot to implement speak()
+
+try:
+    dog = Dog()
+    dog.speak()
+except NotImplementedError:
+    print("Method not implemented!")
+
+# RecursionError (too deep recursion)
+def infinite_recursion(n):
+    return infinite_recursion(n + 1)
+
+try:
+    infinite_recursion(0)
+except RecursionError:
+    print("Maximum recursion depth exceeded")
+MemoryError (Out of memory)
+# MemoryError (rare in practice)
+try:
+    # Try to allocate huge amount of memory
+    huge_list = [0] * (10**9)  # 1 billion integers
+except MemoryError:
+    print("Out of memory!")
+EOFError (End of file reached)
+# EOFError (input() when EOF reached)
+import sys
+from io import StringIO
+
+# Simulate EOF
+sys.stdin = StringIO("")  # Empty input
+try:
+    input()  # No input available
+except EOFError:
+    print("End of input reached")
+ReferenceError (Weak reference issues)
+# ReferenceError (weak reference to dead object)
+import weakref
+
+class MyClass:
+    pass
+
+obj = MyClass()
+ref = weakref.ref(obj)
+
+del obj  # Object is destroyed
+
+try:
+    ref()  # Try to get the object
+except ReferenceError:
+    print("Weak reference points to dead object")
+BufferError (Buffer operations)
+# BufferError (buffer related operations)
+# Rare, related to memoryview and buffer protocol
+try:
+    # Complex buffer operations that fail
+    pass
+except BufferError:
+    print("Buffer operation failed")
+SystemError (Internal Python error)
+# SystemError (internal Python interpreter error)
+# Should never happen in normal code
+# If you see this, it's likely a bug in Python itself
+ConnectionError Subclasses (Network errors)
+import socket
+
+# ConnectionRefusedError
+try:
+    s = socket.socket()
+    s.connect(("localhost", 9999))  # Port probably not open
+except ConnectionRefusedError:
+    print("Connection refused - server not running?")
+
+# ConnectionResetError
+try:
+    # If server resets connection unexpectedly
+    pass
+except ConnectionResetError:
+    print("Connection reset by peer")
+
+# BrokenPipeError
+try:
+    # Writing to closed pipe/socket
+    pass
+except BrokenPipeError:
+    print("Broken pipe - can't write to closed connection")
+UnicodeError Subclasses (Text encoding issues)
+# UnicodeDecodeError (can't decode bytes to text)
+try:
+    b = b'\xff\xfe'  # Invalid UTF-8
+    text = b.decode('utf-8')
+except UnicodeDecodeError as e:
+    print(f"Can't decode bytes: {e}")
+    print(f"Reason: {e.reason}")
+    print(f"Position: {e.start}-{e.end}")
+
+# UnicodeEncodeError (can't encode text to bytes)
+try:
+    text = "café"  # Contains non-ASCII character
+    b = text.encode('ascii')  # ASCII can't encode 'é'
+except UnicodeEncodeError:
+    print("Can't encode text in ASCII")
+
+# UnicodeTranslateError (translation issues)
+# Rare, related to .translate() method
+When to Catch Which Exception
+Catch specific exceptions (Recommended)
+try:
+    value = my_dict[key]
+except KeyError:  # Specific
+    value = default
+
+try:
+    result = int(user_input)
+except ValueError:  # Specific  
+    print("Please enter a valid number")
+Catch general Exception (For unexpected errors)
+try:
+    complex_operation()
+except (ValueError, TypeError) as e:
+    # Handle expected errors
+    print(f"Input error: {e}")
+except Exception as e:
+    # Log unexpected errors
+    print(f"Unexpected error: {e}")
+    # Consider re-raising: raise
+Don't catch BaseException (Usually)
+# ❌ Bad - catches Ctrl+C and SystemExit too!
+try:
+    run_program()
+except BaseException:  # Don't do this!
+    print("Something happened")
+
+# ✅ Good - only catch "normal" exceptions
+try:
+    run_program()
+except Exception:  # This is what you usually want
+    print("Program error occurred")
+Catch multiple related exceptions
+# File operations
+try:
+    with open(filename, 'r') as f:
+        content = f.read()
+except (FileNotFoundError, PermissionError, IsADirectoryError) as e:
+    print(f"File access error: {e}")
+
+# Network operations  
+try:
+    make_http_request()
+except (ConnectionError, TimeoutError) as e:
+    print(f"Network error: {e}")
+Exception Attributes
+All exceptions have these attributes:
+
+try:
+    1 / 0
+except ZeroDivisionError as e:
+    print(f"Exception type: {type(e).__name__}")  # ZeroDivisionError
+    print(f"Exception message: {e}")              # division by zero
+    print(f"Exception args: {e.args}")            # ('division by zero',)
+    
+    # For syntax errors
+    if hasattr(e, 'lineno'):
+        print(f"Line number: {e.lineno}")
+    if hasattr(e, 'offset'):
+        print(f"Offset: {e.offset}")
+    if hasattr(e, 'filename'):
+        print(f"Filename: {e.filename}")
+Creating Custom Exception Hierarchy
+class AppError(Exception):
+    """Base exception for our application"""
+    pass
+
+class ValidationError(AppError):
+    """Validation failed"""
+    def __init__(self, message, field=None, value=None):
+        self.field = field
+        self.value = value
+        super().__init__(message)
+
+class DatabaseError(AppError):
+    """Database operation failed"""
+    pass
+
+class NetworkError(AppError):
+    """Network operation failed"""
+    def __init__(self, message, url=None, status_code=None):
+        self.url = url
+        self.status_code = status_code
+        super().__init__(message)
+
+# Usage
+def validate_user(data):
+    if 'email' not in data:
+        raise ValidationError("Email is required", field='email')
+    if '@' not in data['email']:
+        raise ValidationError("Invalid email format", 
+                            field='email', value=data['email'])
+
+try:
+    validate_user({"name": "Alice"})
+except ValidationError as e:
+    print(f"Validation failed: {e}")
+    print(f"Field: {e.field}, Value: {e.value}")
+except AppError as e:
+    print(f"Application error: {e}")
+Quick Reference Cheat Sheet
+Exception	When it occurs	Example
+ZeroDivisionError	Division by zero	10 / 0
+IndexError	List index out of range	[1,2,3][10]
+KeyError	Dictionary key not found	{"a":1}["b"]
+ValueError	Invalid value	int("abc")
+TypeError	Wrong type	5 + "hello"
+AttributeError	Missing attribute	"hello".append()
+FileNotFoundError	File doesn't exist	open("missing.txt")
+PermissionError	No file permission	open("/etc/shadow")
+ImportError	Can't import module	import missing
+ModuleNotFoundError	Module not found	import missing
+NameError	Variable not defined	print(undefined)
+SyntaxError	Code syntax error	print("Hello"
+IndentationError	Wrong indentation	Mixing tabs/spaces
+KeyboardInterrupt	Ctrl+C pressed	User interruption
+SystemExit	sys.exit() called	Program exit
+AssertionError	assert failed	assert False
+RuntimeError	General runtime error	Various
+NotImplementedError	Abstract method	Must be implemented
+RecursionError	Too deep recursion	Infinite recursion
+MemoryError	Out of memory	Huge allocation
+EOFError	End of input	input() at EOF
+UnicodeError	Text encoding issue	"café".encode('ascii')
+ConnectionError	Network issues	Socket errors
+TimeoutError	Operation timed out	Network timeout
