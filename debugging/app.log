@@ -1,0 +1,5 @@
+2026-03-02 17:42:06,182 - root - DEBUG -Detailed debug information
+2026-03-02 17:42:06,183 - root - INFO -something happened
+2026-03-02 17:42:06,183 - root - WARNING -something unexpected
+2026-03-02 17:42:06,204 - root - ERROR -something failed
+2026-03-02 17:42:06,204 - root - CRITICAL -Program can not continue
