@@ -1,3 +1,6 @@
+# pass - Do nothing (placeholder)
+
+
 for i in range(5):
     pass  # TODO: Implement later
 
