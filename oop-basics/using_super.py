@@ -21,3 +21,10 @@ class Car(Vehicle):
 
 car = Car("toyatta", "camry", 4)
 print(car.info())
+
+# output
+# toyatta camry with 4 doors
+
+# What super() does:
+# Calls the parent class's method
+# Lets you extend behavior instead of completely replacing it

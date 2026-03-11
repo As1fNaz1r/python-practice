@@ -10,3 +10,4 @@ csv = "Alice, 25, NYC"
 parts = csv.split(",")
 print(parts)
 # ['Alice', ' 25', ' NYC']
+

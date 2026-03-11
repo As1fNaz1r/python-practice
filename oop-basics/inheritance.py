@@ -31,3 +31,15 @@ cat.sleep()
 
 dog.bark()
 cat.meow()
+
+# output
+# Buddy is eating
+# whiskers is sleeping
+# Buddy says woof!
+# whiskers says Meow
+
+# The relationship:
+
+# Dog is an Animal (has all Animal features)
+# Cat is an Animal (has all Animal features)
+# But Dog is not a Cat

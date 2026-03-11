@@ -7,3 +7,4 @@ for word in words:
     grouped[first_letter].append(word)
 
 print(grouped)
+# {'a': ['apple', 'apricot'], 'b': ['banana', 'blueberry']}

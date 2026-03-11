@@ -12,4 +12,6 @@ if age > 18 or has_licence:
 
 # NOT reverses the condition
 if not has_car:
-    print("you have a car")
+    print("you don't have a car")
+
+
