@@ -15,7 +15,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://localhost:3333"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -207,3 +207,7 @@ def search_files(q: str):
             break
     
     return {"results": results, "count": len(results)}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
